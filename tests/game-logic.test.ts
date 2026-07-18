@@ -27,9 +27,10 @@ test("パワフルは上昇量2倍、クソデカは1〜5%", () => {
   assert.equal(riskIncrement(1, "giant", () => 0.999), 500);
 });
 
-test("ハプニングは1%未満でのみ発生する", () => {
+test("ハプニングは3%未満でのみ発生する", () => {
   assert.deepEqual(rollHappening(() => 0.5), { type: null, requiredPumps: 1 });
-  const values = [0.009, 0.1, 0.75];
+  assert.deepEqual(rollHappening(() => 0.03), { type: null, requiredPumps: 1 });
+  const values = [0.029, 0.1, 0.75];
   assert.deepEqual(rollHappening(() => values.shift() ?? 0), { type: "force", requiredPumps: 5 });
 });
 

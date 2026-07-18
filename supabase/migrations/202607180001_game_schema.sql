@@ -61,7 +61,7 @@ declare
   v_event_type text := null;
   v_required integer := 1;
 begin
-  if v_happening_roll < 0.01 then
+  if v_happening_roll < 0.03 then
     v_event_roll := random();
     if v_event_roll < 0.333 then
       v_event_type := 'force';
