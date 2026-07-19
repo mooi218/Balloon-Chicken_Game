@@ -46,7 +46,7 @@ language sql
 immutable
 set search_path = public
 as $$
-  select encode(digest(p_token, 'sha256'), 'hex');
+  select encode(extensions.digest(p_token, 'sha256'), 'hex');
 $$;
 
 create or replace function public.set_turn_event(p_room_id uuid, p_player_id uuid)
