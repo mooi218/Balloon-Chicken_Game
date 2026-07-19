@@ -25,9 +25,11 @@ const Dice5 = glyph("⚄");
 const Gamepad2 = glyph("⌘");
 const Link2 = glyph("↗");
 const LoaderCircle = glyph("◌");
+const Lock = glyph("🔒");
 const LogIn = glyph("↪");
 const Play = glyph("▶");
 const RotateCcw = glyph("↻");
+const Share2 = glyph("◇");
 const Sparkles = glyph("✦");
 const Users = glyph("◎");
 const Volume2 = glyph("♪");
@@ -216,6 +218,7 @@ function GameStage({
   const loser = players.find((player) => player.id === loserId);
   const isMyTurn = status === "playing" && currentPlayerId === myPlayerId;
   const canPass = turnPumps >= eventRequired;
+  const passEnabled = isMyTurn && canPass && eventType !== "giant" && !busy;
   const balloonSize = 178 + Math.min(totalPumps * 1.15, 205);
   const danger = Math.min(riskBps / 10_000, 1);
 
@@ -293,7 +296,6 @@ function GameStage({
           <span>現在の爆発確率</span>
           <strong>{formatProbability(riskBps)}</strong>
           <div className="risk-meter"><i style={{ width: `${Math.max(2, danger * 100)}%` }} /></div>
-          <small>みんなで {totalPumps} 回シコシコしました</small>
         </div>
 
         {status === "playing" && (
@@ -304,15 +306,23 @@ function GameStage({
               onClick={onInflate}
               data-testid="inflate-button"
             >
-              {busy ? <LoaderCircle className="spin" size={23} /> : <span className="pump-symbol">↕</span>}
-              <span><strong>膨らませる</strong><small>{isMyTurn ? "押すたび、ちょっと危険" : `${currentPlayer?.nickname ?? "相手"}を見守る`}</small></span>
+              {busy ? <LoaderCircle className="spin" size={23} /> : <span className="inflate-balloon-icon" aria-hidden="true" />}
+              <strong>膨らませる</strong>
             </button>
-            {isMyTurn && turnPumps > 0 && eventType !== "giant" && (
-              <button className="pass-button" disabled={!canPass || busy} onClick={onPass}>
-                {canPass ? "パスする" : `あと ${eventRequired - turnPumps} 回`}
-                <span>→</span>
-              </button>
-            )}
+            <button className="pass-button" disabled={!passEnabled} onClick={onPass}>
+              {!passEnabled && <Lock size={15} />}
+              <span className="pass-label">
+                <strong>パスする</strong>
+                {!passEnabled && (
+                  <small>
+                    {isMyTurn
+                      ? `あと ${Math.max(eventRequired - turnPumps, 0)} 回膨らませる`
+                      : "手番を待っています"}
+                  </small>
+                )}
+              </span>
+              {passEnabled && <span className="pass-arrow" aria-hidden="true">→</span>}
+            </button>
           </div>
         )}
       </section>
@@ -322,7 +332,7 @@ function GameStage({
           <div className="result-card">
             <span className="result-kicker">LIMIT BREAK</span>
             <div className="result-icon"><Bomb size={34} /></div>
-            <h2 id="result-title">{loser?.nickname ?? "誰か"}、限界。</h2>
+            <h2 id="result-title">{loser?.nickname ?? "誰か"}が爆発させました！</h2>
             <p>風船を爆発させた人の負け！</p>
             <div className="result-stats">
               <div><span>最後の確率</span><strong>{formatProbability(riskBps)}</strong></div>
@@ -351,6 +361,10 @@ export default function GameApp() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [homeQrDataUrl, setHomeQrDataUrl] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const explodedRevision = useRef<string>("");
   const roomId = room?.id;
 
@@ -564,6 +578,24 @@ export default function GameApp() {
     window.setTimeout(() => setCopied(false), 1800);
   }
 
+  async function openHomeShare() {
+    const shareUrl = `${window.location.origin}${window.location.pathname}`;
+    const qrCode = await QRCode.toDataURL(shareUrl, {
+      width: 320,
+      margin: 2,
+      color: { dark: "#17131f", light: "#fffdf7" },
+      errorCorrectionLevel: "M",
+    });
+    setHomeQrDataUrl(qrCode);
+    setShareOpen(true);
+  }
+
+  async function copyHomeLink() {
+    await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}`);
+    setShareCopied(true);
+    window.setTimeout(() => setShareCopied(false), 1800);
+  }
+
   if (screen === "lobby" && room && session) {
     const isHost = room.host_player_id === session.playerId;
     return (
@@ -573,7 +605,6 @@ export default function GameApp() {
         <section className="lobby-card">
           <div className="lobby-copy">
             <span className="eyebrow">ROOM IS READY</span>
-            <h1>仲間を呼んで、<br />限界を待つ。</h1>
             <p>QRコードを読み取るか、部屋コードを送って参加してもらってください。</p>
             <div className="room-code-block">
               <span>部屋コード</span>
@@ -664,32 +695,31 @@ export default function GameApp() {
       <div className="noise" aria-hidden="true" />
       <nav className="home-nav">
         <div className="mini-logo"><span>◉</span>LIMIT PUMP</div>
-        <div className="online-pill"><i />ONLINE / SOLO</div>
+        <div className="home-nav-actions">
+          <div className="online-pill"><i />ONLINE / SOLO</div>
+          <button className="share-button" onClick={() => void openHomeShare()}><Share2 size={16} />共有</button>
+        </div>
       </nav>
       <section className="hero-grid">
         <div className="hero-copy">
           <div className="kicker"><Sparkles size={15} />風船割りチキンレース</div>
           <h1>
-            何回でもシコシコしてよくて<br />
-            でも最低一回はシコってしなきゃいけなくて<br />
-            <em>限界に達した人が負けっていうゲーム</em>
+            <span>何回でもシコシコ</span>
+            <span>してよくて</span>
+            <span>でも最低一回は</span>
+            <span>シコってしなきゃ</span>
+            <span>いけなくて</span>
+            <span>限界に達した人が</span>
+            <span>負けっていうゲーム</span>
           </h1>
-          <p>「シコってする」＝ 空気入れで風船に空気を入れること。<br />欲張るか、逃げるか。最後に破裂させた人が負け。</p>
-          <div className="rule-strip">
-            <div><strong>01</strong><span>最低1回は<br />膨らませる</span></div>
-            <div><strong>02</strong><span>2回目から<br />パスできる</span></div>
-            <div><strong>03</strong><span>爆発させたら<br />即、負け</span></div>
-          </div>
         </div>
         <div className="setup-card">
-          <div className="setup-heading"><span className="eyebrow">PLAYER SETUP</span><h2>まずは名前を決めよう</h2></div>
           <label className="nickname-label">
             <span>ニックネーム</span>
             <div className="nickname-field">
               <input value={nickname} maxLength={18} onChange={(event) => setNickname(event.target.value)} aria-label="ニックネーム" />
               <button onClick={() => setNickname(randomNickname())} aria-label="ランダムな名前にする" title="ランダムな名前にする"><Dice5 size={22} /></button>
             </div>
-            <small>サイコロを押すと、300語から無造作に選びます。</small>
           </label>
           <div className="mode-buttons">
             <button className="mode-card multiplayer" onClick={() => void createRoom()} disabled={busy}>
@@ -717,7 +747,38 @@ export default function GameApp() {
           {error && <p className="form-error">{error}</p>}
         </div>
       </section>
-      <footer className="home-footer"><span>1%のターンで何かが起こる。</span><span>強制 / パワフル / クソデカ</span></footer>
+      <footer className="home-footer">
+        <button onClick={() => setSupportOpen(true)}>不具合が発生したらここを押してください</button>
+      </footer>
+
+      {shareOpen && (
+        <div className="home-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="share-title">
+          <div className="home-modal-card share-modal-card">
+            <button className="modal-close" onClick={() => setShareOpen(false)} aria-label="共有画面を閉じる">×</button>
+            <span className="eyebrow">SHARE THIS GAME</span>
+            <h2 id="share-title">QRコードでゲームを共有</h2>
+            {/* QRはdata URLなので画像最適化の対象外です。 */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {homeQrDataUrl && <img src={homeQrDataUrl} alt="ゲームのトップページを開くQRコード" />}
+            <button className="copy-home-link" onClick={() => void copyHomeLink()}>
+              {shareCopied ? <Check size={17} /> : <Copy size={17} />}
+              {shareCopied ? "コピーしました" : "ゲームのリンクをコピー"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {supportOpen && (
+        <div className="home-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="support-title">
+          <div className="home-modal-card support-modal-card">
+            <button className="modal-close" onClick={() => setSupportOpen(false)} aria-label="問い合わせ先を閉じる">×</button>
+            <span className="eyebrow">BUG REPORT</span>
+            <h2 id="support-title">不具合のご連絡先</h2>
+            <a href="mailto:yommypixeldev@gmail.com">メール：yommypixeldev@gmail.com</a>
+            <a href="https://www.instagram.com/umoy218/" target="_blank" rel="noreferrer">Instagram：@umoy218</a>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

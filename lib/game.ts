@@ -6,7 +6,7 @@ export type TurnEvent = {
 };
 
 export function rollHappening(random = Math.random): TurnEvent {
-  if (random() >= 0.01) return { type: null, requiredPumps: 1 };
+  if (random() >= 0.03) return { type: null, requiredPumps: 1 };
   const eventRoll = random();
   if (eventRoll < 1 / 3) {
     return { type: "force", requiredPumps: 2 + Math.floor(random() * 4) };
