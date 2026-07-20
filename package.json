@@ -9,6 +9,8 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
+    "cloudflare:deploy": "npm run build && wrangler deploy --config dist/server/wrangler.json",
+    "cloudflare:dry-run": "npm run build && wrangler deploy --dry-run --config dist/server/wrangler.json",
     "render:build": "next build",
     "render:start": "next start",
     "test": "tsx --test tests/*.test.ts",

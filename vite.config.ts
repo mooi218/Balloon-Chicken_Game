@@ -12,7 +12,9 @@ const { d1, r2 } = hostingConfig;
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
 const localBindingConfig = {
+  name: "balloon-chicken-game",
   main: "./worker/index.ts",
+  compatibility_date: "2026-07-20",
   compatibility_flags: ["nodejs_compat"],
   d1_databases: d1
     ? [
